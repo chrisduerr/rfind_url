@@ -15,4 +15,5 @@ edition = "2018"
 [badges]
 travis-ci = { repository = "chrisduerr/rfind_url" }
 
-[dependencies]
+[features]
+bench = []

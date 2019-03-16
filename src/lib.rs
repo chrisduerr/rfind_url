@@ -40,7 +40,7 @@
 //! [`chars`]: https://doc.rust-lang.org/std/primitive.char.html
 //! [`None`]: https://doc.rust-lang.org/std/option/enum.Option.html#variant.None
 
-#![feature(test)]
+#![cfg_attr(all(test, feature = "bench"), feature(test))]
 #![no_std]
 
 #[cfg(test)]

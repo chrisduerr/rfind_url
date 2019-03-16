@@ -1,8 +1,5 @@
-extern crate test;
-
 extern crate std;
 
-use std::string::String;
 use std::vec::Vec;
 
 use crate::{Parser, SCHEMES};
@@ -149,41 +146,51 @@ fn position(input: &str) -> (usize, usize) {
     (position_left, position_right)
 }
 
-#[bench]
-fn library(b: &mut test::Bencher) {
-    let mut input = String::new();
-    for i in 0..10_000 {
-        if i % 1_000 == 0 {
-            input.push_str("https://example.org");
-        } else {
-            input.push_str(" test ");
-        }
-    }
+#[cfg(feature = "bench")]
+mod bench {
+    extern crate test;
+    extern crate std;
 
-    b.iter(|| {
-        let mut parser = Parser::new();
-        for c in input.chars().rev() {
-            if let Some(url_len) = parser.advance(c) {
-                test::black_box(url_len);
+    use std::string::String;
+
+    use crate::Parser;
+
+    #[bench]
+    fn library(b: &mut test::Bencher) {
+        let mut input = String::new();
+        for i in 0..10_000 {
+            if i % 1_000 == 0 {
+                input.push_str("https://example.org");
+            } else {
+                input.push_str(" test ");
             }
         }
-    });
-}
 
-#[bench]
-fn lower_bound(b: &mut test::Bencher) {
-    let mut input = String::new();
-    for i in 0..10_000 {
-        if i % 1_000 == 0 {
-            input.push_str("https://example.org");
-        } else {
-            input.push_str(" test ");
-        }
+        b.iter(|| {
+            let mut parser = Parser::new();
+            for c in input.chars().rev() {
+                if let Some(url_len) = parser.advance(c) {
+                    test::black_box(url_len);
+                }
+            }
+        });
     }
 
-    b.iter(|| {
-        for c in input.chars().rev() {
-            test::black_box(c);
+    #[bench]
+    fn lower_bound(b: &mut test::Bencher) {
+        let mut input = String::new();
+        for i in 0..10_000 {
+            if i % 1_000 == 0 {
+                input.push_str("https://example.org");
+            } else {
+                input.push_str(" test ");
+            }
         }
-    });
+
+        b.iter(|| {
+            for c in input.chars().rev() {
+                test::black_box(c);
+            }
+        });
+    }
 }
