@@ -28,7 +28,7 @@ matrix:
   allow_failures:
     - rust: nightly
 
-install: if [ "$CLIPPY" == "true"]; then rustup component add clippy; fi
+install: if [ "$CLIPPY" == "true" ]; then rustup component add clippy; fi
 script:
   - if [ "$CLIPPY" == "true" ]; then cargo clippy; fi
   - if [ "$CLIPPY" != "true" ]; then cargo test; fi
