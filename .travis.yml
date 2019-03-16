@@ -1,0 +1,34 @@
+language: rust
+
+os:
+  - linux
+  - osx
+  - windows
+
+rust:
+  - stable
+  - beta
+  - nightly
+
+matrix:
+  fast_finish: true
+  include:
+    - name: "Clippy Linux"
+      os: linux
+      env: CLIPPY=true
+      rust: stable
+    - name: "Clippy OSX"
+      os: osx
+      env: CLIPPY=true
+      rust: stable
+    - name: "Clippy Windows"
+      os: windows
+      env: CLIPPY=true
+      rust: stable
+  allow_failures:
+    - rust: nightly
+
+install: if [ "$CLIPPY" == "true"]; then rustup component add clippy; fi
+script:
+  - if [ "$CLIPPY" == "true" ]; then cargo clippy; fi
+  - if [ "$CLIPPY" != "true" ]; then cargo test; fi

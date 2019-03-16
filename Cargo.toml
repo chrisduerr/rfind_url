@@ -1,0 +1,18 @@
+[package]
+authors = ["Christian Duerr <contact@christianduerr.com>"]
+description = "Parser to search strings for URLs in reverse order"
+repository = "https://github.com/chrisduerr/rfind_url.git"
+keywords = ["reverse", "stream", "url", "parser"]
+documentation = "https://docs.rs/rfind_url"
+categories = ["no-std", "parsing"]
+exclude = ["/.travis.yml"]
+license = "MIT/Apache-2.0"
+readme = "README.md"
+name = "rfind_url"
+version = "0.1.0"
+edition = "2018"
+
+[badges]
+travis-ci = { repository = "chrisduerr/rfind_url" }
+
+[dependencies]
