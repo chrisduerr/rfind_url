@@ -1,6 +1,6 @@
 # rfind_url
 
-[![Build Status](https://travis-ci.com/chrisduerr/rfind_url.svg?branch=master)](https://travis-ci.com/chrisduerr/rfind_url)
+[![Build Status](https://travis-ci.org/chrisduerr/rfind_url.svg?branch=master)](https://travis-ci.org/chrisduerr/rfind_url)
 [![crates.io](https://meritbadge.herokuapp.com/rfind_url)](https://crates.io/crates/rfind_url)
 
 This crate provides a parser to search a string for URLs **in reverse order**.
