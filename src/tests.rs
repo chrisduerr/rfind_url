@@ -1,8 +1,6 @@
-extern crate std;
+use std::collections::HashMap;
 
-use std::vec::Vec;
-
-use crate::{Parser, SCHEMES};
+use crate::{Parser, State, SCHEMES};
 
 #[test]
 fn no_scheme_conflicts() {
@@ -37,6 +35,7 @@ fn start() {
     assert_eq!(max_len("https://example.org/test ing"), Some(24));
     assert_eq!(max_len("https://example.org/test?ing"), Some(28));
     assert_eq!(max_len("https://example.org.,;:(!/?"), Some(19));
+    assert_eq!(max_len("https://example.org/"), Some(20));
 }
 
 #[test]
@@ -71,41 +70,77 @@ fn url_schemes() {
 
 #[test]
 fn url_matching_chars() {
-    // TODO assert_eq!(max_len("(https://example.org/test(ing)/?)"), Some(29));
-    // TODO assert_eq!(max_len("(https://example.org/test(ing))"), Some(29));
+    assert_eq!(max_len("(https://example.org/test(ing)/?)"), Some(30));
+    assert_eq!(max_len("(https://example.org/test(ing))"), Some(29));
     assert_eq!(max_len("https://example.org/test(ing)"), Some(29));
-    // TODO assert_eq!(max_len("((https://example.org))"), Some(19));
-    // TODO assert_eq!(max_len(")https://example.org("), Some(19));
-    // TODO assert_eq!(max_len("https://example.org)"), Some(19));
-    // TODO assert_eq!(max_len("https://example.org("), Some(19));
+    assert_eq!(max_len("((https://example.org))"), Some(19));
+    assert_eq!(max_len(")https://example.org("), Some(19));
+    assert_eq!(max_len("https://example.org)"), Some(19));
+    assert_eq!(max_len("https://example.org("), Some(19));
 
     assert_eq!(max_len("https://[2001:db8:a0b:12f0::1]:80"), Some(33));
-    // TODO assert_eq!(max_len("([(https://example.org/test(ing))])"), Some(29));
-    // TODO assert_eq!(max_len("https://example.org/]()"), Some(20));
-    // TODO assert_eq!(max_len("[https://example.org]"), Some(19));
+    assert_eq!(max_len("([(https://example.org/test(ing))])"), Some(29));
+    assert_eq!(max_len("https://example.org/]()"), Some(20));
+    assert_eq!(max_len("[https://example.org]"), Some(19));
 
-    // TODO assert_eq!(max_len("'https://example.org/test'ing'''"), Some(29));
+    assert_eq!(max_len("'https://example.org/test'ing'''"), Some(29));
     assert_eq!(max_len("https://example.org/test'ing'"), Some(29));
-    // TODO assert_eq!(max_len("'https://example.org'"), Some(19));
+    assert_eq!(max_len("'https://example.org'"), Some(19));
     assert_eq!(max_len("'https://example.org"), Some(19));
-    // TODO assert_eq!(max_len("https://example.org'"), Some(19));
+    assert_eq!(max_len("https://example.org'"), Some(19));
+}
+
+#[test]
+fn markdown() {
+    let input = "[test](https://example.org)";
+    let mut result_map = HashMap::new();
+    result_map.insert(19, Some(19));
+    exact_url_match(input, result_map);
+
+    let input = "[https://example.org](test)";
+    let mut result_map = HashMap::new();
+    result_map.insert(25, Some(19));
+    exact_url_match(input, result_map);
+
+    let input = "[https://example.org](https://example.org/longer)";
+    let mut result_map = HashMap::new();
+    result_map.insert(26, Some(26));
+    result_map.insert(47, Some(19));
+    exact_url_match(input, result_map);
 }
 
 #[test]
 fn multiple_urls() {
-    let mut parser = Parser::new();
     let input = "test https://example.org illegal://example.com https://example.com/test 123";
+    let mut result_map = HashMap::new();
+    result_map.insert(27, Some(24));
+    result_map.insert(69, Some(19));
+    exact_url_match(input, result_map);
+}
 
-    let urls: Vec<Option<u16>> = input
-        .chars()
-        .rev()
-        .map(|c| parser.advance(c))
-        .filter(|len| len.is_some())
-        .collect();
+#[test]
+fn reset_on_match() {
+    let mut parser = Parser::new();
 
-    assert_eq!(urls.len(), 2);
-    assert_eq!(urls[0], Some(24));
-    assert_eq!(urls[1], Some(19));
+    for c in "https://example.org".chars().rev() {
+        parser.advance(c);
+    }
+
+    assert_eq!(parser.state, State::Default);
+}
+
+fn exact_url_match(input: &str, result_map: HashMap<usize, Option<u16>>) {
+    let mut parser = Parser::new();
+
+    for (i, c) in input.chars().rev().enumerate() {
+        let result = parser.advance(c);
+
+        if let Some(expected) = result_map.get(&i) {
+            assert_eq!(&result, expected);
+        } else {
+            assert_eq!(result, None);
+        }
+    }
 }
 
 fn max_len(input: &str) -> Option<u16> {
@@ -148,8 +183,8 @@ fn position(input: &str) -> (usize, usize) {
 
 #[cfg(feature = "bench")]
 mod bench {
-    extern crate test;
     extern crate std;
+    extern crate test;
 
     use std::string::String;
 

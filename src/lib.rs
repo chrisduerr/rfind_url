@@ -41,18 +41,24 @@
 //! [`None`]: https://doc.rust-lang.org/std/option/enum.Option.html#variant.None
 
 #![cfg_attr(all(test, feature = "bench"), feature(test))]
-#![no_std]
 
 #[cfg(test)]
 mod tests;
 
 /// Allowed URL schemes.
-pub(crate) const SCHEMES: [&str; 8] = [
-    "http", "https", "mailto", "news", "file", "git", "ssh", "ftp",
+pub(crate) const SCHEMES: [&str; 8] =
+    ["http", "https", "mailto", "news", "file", "git", "ssh", "ftp"];
+
+const SURROUND_CHARACTERS: [SurroundCharacter; 4] = [
+    SurroundCharacter::Bracket('(', ')'),
+    SurroundCharacter::Bracket('[', ']'),
+    SurroundCharacter::Quote('\''),
+    SurroundCharacter::Quote('"'),
 ];
 
 /// URL parser states.
-enum State {
+#[derive(Debug, PartialEq)]
+pub(crate) enum State {
     Default,
     Path,
     SchemeFirstSlash,
@@ -74,7 +80,8 @@ impl Default for State {
 #[derive(Default)]
 pub struct Parser {
     pub(crate) scheme_indices: [u8; 8],
-    state: State,
+    surround_states: Vec<(char, u16)>,
+    pub(crate) state: State,
     len: u16,
 }
 
@@ -122,12 +129,43 @@ impl Parser {
             return None;
         }
 
+        // Filter non-matching surrounding characters like brackets and quotes
+        for surround_char in &SURROUND_CHARACTERS[..] {
+            // Check if this is a matching opening character
+            let m = self.surround_states.iter().enumerate().rfind(|s| (s.1).0 == c);
+
+            match m {
+                // Remove match to permit this surrounding, if surround is not empty
+                Some((index, elem)) if elem.1 + 1 < self.len => {
+                    self.surround_states.remove(index);
+                    return None;
+                },
+                // Store surrounding to find a match in the future
+                None if surround_char.start() == &c => {
+                    self.surround_states.push((*surround_char.end(), self.len));
+                    return None;
+                },
+                _ => (),
+            }
+
+            // Truncate if there's no matching end for this start
+            if surround_char.end() == &c {
+                self.reset();
+                return None;
+            }
+        }
+
         match self.state {
             State::Default => self.advance_default(c),
             State::Path => self.advance_path(c),
             State::SchemeFirstSlash => self.advance_scheme_first_slash(c),
             State::SchemeSecondSlash => self.advance_scheme_second_slash(c),
-            State::Scheme => return self.advance_scheme(c),
+            State::Scheme => {
+                if let Some(length) = self.advance_scheme(c) {
+                    self.reset();
+                    return Some(length);
+                }
+            },
         }
 
         None
@@ -135,6 +173,7 @@ impl Parser {
 
     #[inline]
     fn reset(&mut self) {
+        self.surround_states = Vec::new();
         self.scheme_indices = [0; 8];
         self.state = State::Default;
         self.len = 0;
@@ -143,7 +182,7 @@ impl Parser {
     #[inline]
     fn advance_default(&mut self, c: char) {
         match c {
-            '.'...'/' | ',' | ':'...';' | '?' | '!' | '(' => self.reset(),
+            '.' | ',' | ':'..=';' | '?' | '!' | '(' => self.reset(),
             _ => self.state = State::Path,
         }
     }
@@ -176,7 +215,7 @@ impl Parser {
     #[inline]
     fn advance_scheme(&mut self, c: char) -> Option<u16> {
         match c {
-            'a'...'z' | 'A'...'Z' => {
+            'a'..='z' | 'A'..='Z' => {
                 for (i, index) in self.scheme_indices.iter_mut().enumerate() {
                     let scheme_len = SCHEMES[i].len() as u8;
 
@@ -193,10 +232,13 @@ impl Parser {
                     // Returning early here is only possible because no scheme ends with another
                     // scheme. This is covered by the `no_scheme_conflicts` test.
                     if *index == scheme_len {
+                        // Truncate the length to exclude all unmatched surroundings
+                        self.len -= self.surround_states.last().map(|s| s.1).unwrap_or(0);
+
                         return Some(self.len);
                     }
                 }
-            }
+            },
             _ => self.reset(),
         }
 
@@ -207,16 +249,38 @@ impl Parser {
 #[inline]
 fn is_illegal(c: char) -> bool {
     match c {
-        '\u{00}'...'\u{1F}'
-        | '\u{7F}'...'\u{9F}'
+        '\u{00}'..='\u{1F}'
+        | '\u{7F}'..='\u{9F}'
         | '<'
         | '>'
         | '"'
         | ' '
-        | '{'...'}'
+        | '{'..='}'
         | '\\'
         | '^'
         | '`' => true,
         _ => false,
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+enum SurroundCharacter {
+    Bracket(char, char),
+    Quote(char),
+}
+
+impl SurroundCharacter {
+    fn start(&self) -> &char {
+        match self {
+            SurroundCharacter::Bracket(_end, start) => &start,
+            SurroundCharacter::Quote(quote) => &quote,
+        }
+    }
+
+    fn end(&self) -> &char {
+        match self {
+            SurroundCharacter::Bracket(end, _start) => &end,
+            SurroundCharacter::Quote(quote) => &quote,
+        }
     }
 }
