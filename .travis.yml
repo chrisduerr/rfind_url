@@ -6,8 +6,8 @@ os:
   - windows
 
 rust:
+  - 1.32.0
   - stable
-  - beta
   - nightly
 
 matrix:
@@ -25,10 +25,17 @@ matrix:
       os: windows
       env: CLIPPY=true
       rust: stable
+    - name: "Rustfmt"
+      os: linux
+      env: RUSTFMT=true
+      rust: nightly
   allow_failures:
     - rust: nightly
 
-install: if [ "$CLIPPY" == "true" ]; then rustup component add clippy; fi
+install:
+  - if [ "$RUSTFMT" == "true" ]; then rustup component add rustfmt; fi
+  - if [ "$CLIPPY" == "true" ]; then rustup component add clippy; fi
 script:
+  - if [ "$RUSTFMT" == "true" ]; then cargo fmt -- --check; fi
   - if [ "$CLIPPY" == "true" ]; then cargo clippy; fi
   - if [ "$CLIPPY" != "true" ]; then cargo test; fi
