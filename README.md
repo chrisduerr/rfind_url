@@ -1,4 +1,4 @@
-# rfind_url
+# Reverse Find URL
 
 [![Build Status](https://travis-ci.org/chrisduerr/rfind_url.svg?branch=master)](https://travis-ci.org/chrisduerr/rfind_url)
 [![crates.io](https://meritbadge.herokuapp.com/rfind_url)](https://crates.io/crates/rfind_url)
