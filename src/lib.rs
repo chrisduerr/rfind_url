@@ -171,8 +171,28 @@ impl Parser {
         None
     }
 
+    /// Reset the parser to its initial state.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rfind_url::Parser;
+    ///
+    /// let mut parser = Parser::new();
+    ///
+    /// // Feed some data into the parser
+    /// for c in "ttps://example.org".chars().rev() {
+    ///     assert_eq!(parser.advance(c), None);
+    /// }
+    ///
+    /// // Reset to initial state, ignoring the previously received characters
+    /// parser.reset();
+    ///
+    /// // No URL detected, since the state has been reset
+    /// assert_eq!(parser.advance('h'), None);
+    /// ```
     #[inline]
-    fn reset(&mut self) {
+    pub fn reset(&mut self) {
         self.surround_states = Vec::new();
         self.scheme_indices = [0; 8];
         self.state = State::Default;
@@ -270,6 +290,7 @@ enum SurroundCharacter {
 }
 
 impl SurroundCharacter {
+    #[inline]
     fn start(&self) -> &char {
         match self {
             SurroundCharacter::Bracket(_end, start) => &start,
@@ -277,6 +298,7 @@ impl SurroundCharacter {
         }
     }
 
+    #[inline]
     fn end(&self) -> &char {
         match self {
             SurroundCharacter::Bracket(end, _start) => &end,

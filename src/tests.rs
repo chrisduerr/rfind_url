@@ -129,6 +129,19 @@ fn reset_on_match() {
     assert_eq!(parser.state, State::Default);
 }
 
+#[test]
+fn reset_state() {
+    let mut parser = Parser::new();
+
+    for c in "ttps://example.org".chars().rev() {
+        parser.advance(c);
+    }
+
+    parser.reset();
+
+    assert_eq!(parser.advance('h'), None);
+}
+
 fn exact_url_match(input: &str, result_map: HashMap<usize, Option<u16>>) {
     let mut parser = Parser::new();
 
