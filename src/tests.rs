@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{Parser, State, SCHEMES};
+use crate::{Parser, SCHEMES, ParserState};
 
 #[test]
 fn no_scheme_conflicts() {
@@ -94,39 +94,45 @@ fn url_matching_chars() {
 fn markdown() {
     let input = "[test](https://example.org)";
     let mut result_map = HashMap::new();
-    result_map.insert(19, Some(19));
+    result_map.insert(19, ParserState::Url(19));
+    result_map.insert(20, ParserState::NoUrl);
     exact_url_match(input, result_map);
 
     let input = "[https://example.org](test)";
     let mut result_map = HashMap::new();
-    result_map.insert(25, Some(19));
+    result_map.insert(25, ParserState::Url(19));
+    result_map.insert(26, ParserState::NoUrl);
     exact_url_match(input, result_map);
 
     let input = "[https://example.org](https://example.org/longer)";
     let mut result_map = HashMap::new();
-    result_map.insert(26, Some(26));
-    result_map.insert(47, Some(19));
+    result_map.insert(26, ParserState::Url(26));
+    result_map.insert(27, ParserState::NoUrl);
+    result_map.insert(47, ParserState::Url(19));
+    result_map.insert(48, ParserState::NoUrl);
     exact_url_match(input, result_map);
 }
 
 #[test]
 fn multiple_urls() {
-    let input = "test https://example.org illegal://example.com https://example.com/test 123";
+    let input = "https://example.org https://example.com/test";
     let mut result_map = HashMap::new();
-    result_map.insert(27, Some(24));
-    result_map.insert(69, Some(19));
+    result_map.insert(23, ParserState::Url(24));
+    result_map.insert(24, ParserState::NoUrl);
+    result_map.insert(43, ParserState::Url(19));
     exact_url_match(input, result_map);
 }
 
 #[test]
-fn reset_on_match() {
-    let mut parser = Parser::new();
-
-    for c in "https://example.org".chars().rev() {
-        parser.advance(c);
-    }
-
-    assert_eq!(parser.state, State::Default);
+fn parser_states() {
+    let input = " https://example.org test ;";
+    let mut result_map = HashMap::new();
+    result_map.insert(0, ParserState::NoUrl);
+    result_map.insert(1, ParserState::NoUrl);
+    result_map.insert(6, ParserState::NoUrl);
+    result_map.insert(25, ParserState::Url(19));
+    result_map.insert(26, ParserState::NoUrl);
+    exact_url_match(input, result_map);
 }
 
 #[test]
@@ -139,10 +145,10 @@ fn reset_state() {
 
     parser.reset();
 
-    assert_eq!(parser.advance('h'), None);
+    assert_eq!(parser.advance('h'), ParserState::MaybeUrl);
 }
 
-fn exact_url_match(input: &str, result_map: HashMap<usize, Option<u16>>) {
+fn exact_url_match(input: &str, result_map: HashMap<usize, ParserState>) {
     let mut parser = Parser::new();
 
     for (i, c) in input.chars().rev().enumerate() {
@@ -151,7 +157,7 @@ fn exact_url_match(input: &str, result_map: HashMap<usize, Option<u16>>) {
         if let Some(expected) = result_map.get(&i) {
             assert_eq!(&result, expected);
         } else {
-            assert_eq!(result, None);
+            assert_eq!(result, ParserState::MaybeUrl);
         }
     }
 }
@@ -161,7 +167,7 @@ fn max_len(input: &str) -> Option<u16> {
     let mut url_len = None;
 
     for c in input.chars().rev() {
-        if let Some(len) = parser.advance(c) {
+        if let ParserState::Url(len) = parser.advance(c) {
             url_len = Some(len);
         }
     }
@@ -182,7 +188,7 @@ fn position(input: &str) -> (usize, usize) {
             position_right += 1;
         }
 
-        if let Some(len) = parser.advance(c) {
+        if let ParserState::Url(len) = parser.advance(c) {
             url_len = Some(len);
         }
     }
@@ -201,7 +207,7 @@ mod bench {
 
     use std::string::String;
 
-    use crate::Parser;
+    use crate::{Parser, ParserState};
 
     #[bench]
     fn library(b: &mut test::Bencher) {
@@ -217,7 +223,7 @@ mod bench {
         b.iter(|| {
             let mut parser = Parser::new();
             for c in input.chars().rev() {
-                if let Some(url_len) = parser.advance(c) {
+                if let ParserState::Url(url_len) = parser.advance(c) {
                     test::black_box(url_len);
                 }
             }

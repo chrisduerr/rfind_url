@@ -1,11 +1,11 @@
-use rfind_url::Parser;
+use rfind_url::{Parser, ParserState};
 
 fn main() {
     let input = "before https://example.org after";
 
     let mut parser = Parser::new();
     for (i, c) in input.chars().rev().enumerate() {
-        if let Some(url_len) = parser.advance(c) {
+        if let ParserState::Url(url_len) = parser.advance(c) {
             let url_start = input.len() - i - 1;
             let url_end = url_start + url_len as usize - 1;
 

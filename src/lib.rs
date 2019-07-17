@@ -7,38 +7,41 @@
 //! Text can be fed into the parser in reverse order:
 //!
 //! ```
-//! use rfind_url::Parser;
+//! use rfind_url::{Parser, ParserState};
 //!
 //! let mut parser = Parser::new();
 //!
-//! for c in "There is no URL here.".chars().rev() {
-//!     assert_eq!(parser.advance(c), None);
+//! for c in "There_is_no_URL_here".chars().rev() {
+//!     assert_eq!(parser.advance(c), ParserState::MaybeUrl);
 //! }
 //! ```
 //!
 //! The parser returns the length of the URL as soon as the last character of the URL is pushed
-//! into it. Otherwise it will return [`None`]:
+//! into it. If it can be guaranteed that the current character is not part of a URL,
+//! [`ParserState::NoUrl`] will be returned. Otherwise the response will be
+//! [`ParserState::MaybeUrl`].
 //!
 //! ```
-//! use rfind_url::Parser;
+//! use rfind_url::{Parser, ParserState};
 //!
 //! let mut parser = Parser::new();
 //!
-//! // Parser did not find any URLs
-//! assert_eq!(parser.advance(' '), None);
+//! // Parser guarantees there's currently no active URL
+//! assert_eq!(parser.advance(' '), ParserState::NoUrl);
 //!
 //! // URLs are only returned once they are complete
 //! for c in "ttps://example.org".chars().rev() {
-//!     assert_eq!(parser.advance(c), None);
+//!     assert_eq!(parser.advance(c), ParserState::MaybeUrl);
 //! }
 //!
 //! // Parser has detected a URL spanning the last 19 characters
-//! assert_eq!(parser.advance('h'), Some(19));
+//! assert_eq!(parser.advance('h'), ParserState::Url(19));
 //! ```
 //!
-//! [`Parser`]: struct.Parser.html
 //! [`chars`]: https://doc.rust-lang.org/std/primitive.char.html
-//! [`None`]: https://doc.rust-lang.org/std/option/enum.Option.html#variant.None
+//! [`ParserState::MaybeUrl`]: enum.ParserState.html#variant.MaybeUrl
+//! [`ParserState::NoUrl`]: enum.ParserState.html#variant.NoUrl
+//! [`Parser`]: struct.Parser.html
 
 #![cfg_attr(all(test, feature = "bench"), feature(test))]
 
@@ -56,9 +59,9 @@ const SURROUND_CHARACTERS: [SurroundCharacter; 4] = [
     SurroundCharacter::Quote('"'),
 ];
 
-/// URL parser states.
+/// Internal URL parser states.
 #[derive(Debug, PartialEq)]
-pub(crate) enum State {
+enum State {
     Default,
     Path,
     SchemeFirstSlash,
@@ -73,6 +76,17 @@ impl Default for State {
     }
 }
 
+/// Current parser state.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum ParserState {
+    /// Parser finished parsing a URL with the defined length.
+    Url(u16),
+    /// Parser might currently be inside a URL.
+    MaybeUrl,
+    /// Parser is not inside a URL.
+    NoUrl,
+}
+
 /// State machine for finding URLs.
 ///
 /// The URL parser takes characters of a string **in reverse order** and returns the length of the
@@ -80,8 +94,9 @@ impl Default for State {
 #[derive(Default)]
 pub struct Parser {
     pub(crate) scheme_indices: [u8; 8],
-    surround_states: Vec<(char, u16)>,
     pub(crate) state: State,
+
+    surround_states: Vec<(char, u16)>,
     len: u16,
 }
 
@@ -105,28 +120,28 @@ impl Parser {
     /// # Examples
     ///
     /// ```
-    /// use rfind_url::Parser;
+    /// use rfind_url::{Parser, ParserState};
     ///
     /// let mut parser = Parser::new();
     ///
-    /// // Parser did not find any URLs
-    /// assert_eq!(parser.advance(' '), None);
+    /// // Current character is not part of a URL
+    /// assert_eq!(parser.advance(' '), ParserState::NoUrl);
     ///
     /// // URLs are only returned once they are complete
     /// for c in "ttps://example.org".chars().rev() {
-    ///     assert_eq!(parser.advance(c), None);
+    ///     assert_eq!(parser.advance(c), ParserState::MaybeUrl);
     /// }
     ///
     /// // Parser has detected a URL spanning the last 19 characters
-    /// assert_eq!(parser.advance('h'), Some(19));
+    /// assert_eq!(parser.advance('h'), ParserState::Url(19));
     /// ```
     #[inline]
-    pub fn advance(&mut self, c: char) -> Option<u16> {
+    pub fn advance(&mut self, c: char) -> ParserState {
         self.len += 1;
 
         if is_illegal(c) {
             self.reset();
-            return None;
+            return ParserState::NoUrl;
         }
 
         // Filter non-matching surrounding characters like brackets and quotes
@@ -138,12 +153,12 @@ impl Parser {
                 // Remove match to permit this surrounding, if surround is not empty
                 Some((index, elem)) if elem.1 + 1 < self.len => {
                     self.surround_states.remove(index);
-                    return None;
+                    return ParserState::MaybeUrl;
                 },
                 // Store surrounding to find a match in the future
                 None if surround_char.start() == &c => {
                     self.surround_states.push((*surround_char.end(), self.len));
-                    return None;
+                    return ParserState::MaybeUrl;
                 },
                 _ => (),
             }
@@ -151,7 +166,7 @@ impl Parser {
             // Truncate if there's no matching end for this start
             if surround_char.end() == &c {
                 self.reset();
-                return None;
+                return ParserState::NoUrl;
             }
         }
 
@@ -163,12 +178,15 @@ impl Parser {
             State::Scheme => {
                 if let Some(length) = self.advance_scheme(c) {
                     self.reset();
-                    return Some(length);
+                    return ParserState::Url(length);
                 }
             },
         }
 
-        None
+        match self.len {
+            0 => ParserState::NoUrl,
+            _ => ParserState::MaybeUrl
+        }
     }
 
     /// Reset the parser to its initial state.
@@ -176,20 +194,20 @@ impl Parser {
     /// # Examples
     ///
     /// ```
-    /// use rfind_url::Parser;
+    /// use rfind_url::{Parser, ParserState};
     ///
     /// let mut parser = Parser::new();
     ///
     /// // Feed some data into the parser
     /// for c in "ttps://example.org".chars().rev() {
-    ///     assert_eq!(parser.advance(c), None);
+    ///     assert_eq!(parser.advance(c), ParserState::MaybeUrl);
     /// }
     ///
     /// // Reset to initial state, ignoring the previously received characters
     /// parser.reset();
     ///
     /// // No URL detected, since the state has been reset
-    /// assert_eq!(parser.advance('h'), None);
+    /// assert_eq!(parser.advance('h'), ParserState::MaybeUrl);
     /// ```
     #[inline]
     pub fn reset(&mut self) {
