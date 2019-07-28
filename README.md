@@ -14,12 +14,12 @@ All functionality is handled by the
 Text can be fed into the parser in reverse order:
 
 ```
-use rfind_url::Parser;
+use rfind_url::{Parser, ParserState};
 
 let mut parser = Parser::new();
 
-for c in "There is no URL here.".chars().rev() {
-    assert_eq!(parser.advance(c), None);
+for c in "There_is_no_URL_here".chars().rev() {
+    assert_eq!(parser.advance(c), ParserState::MaybeUrl);
 }
 ```
 
@@ -28,18 +28,18 @@ it. Otherwise it will return
 [`None`](https://doc.rust-lang.org/std/option/enum.Option.html#variant.None):
 
 ```
-use rfind_url::Parser;
+use rfind_url::{Parser, ParserState};
 
 let mut parser = Parser::new();
 
-// Parser did not find any URLs
-assert_eq!(parser.advance(' '), None);
+// Parser guarantees there's currently no active URL
+assert_eq!(parser.advance(' '), ParserState::NoUrl);
 
 // URLs are only returned once they are complete
 for c in "ttps://example.org".chars().rev() {
-    assert_eq!(parser.advance(c), None);
+    assert_eq!(parser.advance(c), ParserState::MaybeUrl);
 }
 
 // Parser has detected a URL spanning the last 19 characters
-assert_eq!(parser.advance('h'), Some(19));
+assert_eq!(parser.advance('h'), ParserState::Url(19));
 ```
