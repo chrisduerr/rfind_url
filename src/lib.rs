@@ -80,7 +80,7 @@ impl Default for State {
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ParserState {
     /// Parser finished parsing a URL with the defined length.
-    Url(u16),
+    Url(usize),
     /// Parser might currently be inside a URL.
     MaybeUrl,
     /// Parser is not inside a URL.
@@ -96,8 +96,8 @@ pub struct Parser {
     pub(crate) scheme_indices: [u8; 8],
     pub(crate) state: State,
 
-    surround_states: Vec<(char, u16)>,
-    len: u16,
+    surround_states: Vec<(char, usize)>,
+    len: usize,
 }
 
 impl Parser {
@@ -185,7 +185,7 @@ impl Parser {
 
         match self.len {
             0 => ParserState::NoUrl,
-            _ => ParserState::MaybeUrl
+            _ => ParserState::MaybeUrl,
         }
     }
 
@@ -251,7 +251,7 @@ impl Parser {
     }
 
     #[inline]
-    fn advance_scheme(&mut self, c: char) -> Option<u16> {
+    fn advance_scheme(&mut self, c: char) -> Option<usize> {
         match c {
             'a'..='z' | 'A'..='Z' => {
                 for (i, index) in self.scheme_indices.iter_mut().enumerate() {

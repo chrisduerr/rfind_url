@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{Parser, SCHEMES, ParserState};
+use crate::{Parser, ParserState, SCHEMES};
 
 #[test]
 fn no_scheme_conflicts() {
@@ -85,8 +85,9 @@ fn url_matching_chars() {
 
     assert_eq!(max_len("'https://example.org/test'ing'''"), Some(29));
     assert_eq!(max_len("https://example.org/test'ing'"), Some(29));
+    assert_eq!(max_len("\"https://example.org\""), Some(19));
     assert_eq!(max_len("'https://example.org'"), Some(19));
-    assert_eq!(max_len("'https://example.org"), Some(19));
+    assert_eq!(max_len("\"https://example.org"), Some(19));
     assert_eq!(max_len("https://example.org'"), Some(19));
 }
 
@@ -162,7 +163,7 @@ fn exact_url_match(input: &str, result_map: HashMap<usize, ParserState>) {
     }
 }
 
-fn max_len(input: &str) -> Option<u16> {
+fn max_len(input: &str) -> Option<usize> {
     let mut parser = Parser::new();
     let mut url_len = None;
 
