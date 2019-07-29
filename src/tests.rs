@@ -203,7 +203,6 @@ fn position(input: &str) -> (usize, usize) {
 
 #[cfg(feature = "bench")]
 mod bench {
-    extern crate std;
     extern crate test;
 
     use std::string::String;

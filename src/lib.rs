@@ -52,11 +52,10 @@ mod tests;
 pub(crate) const SCHEMES: [&str; 8] =
     ["http", "https", "mailto", "news", "file", "git", "ssh", "ftp"];
 
-const SURROUND_CHARACTERS: [SurroundCharacter; 4] = [
+const SURROUND_CHARACTERS: [SurroundCharacter; 3] = [
     SurroundCharacter::Bracket('(', ')'),
     SurroundCharacter::Bracket('[', ']'),
     SurroundCharacter::Quote('\''),
-    SurroundCharacter::Quote('"'),
 ];
 
 /// Internal URL parser states.
@@ -211,7 +210,7 @@ impl Parser {
     /// ```
     #[inline]
     pub fn reset(&mut self) {
-        self.surround_states = Vec::new();
+        self.surround_states.clear();
         self.scheme_indices = [0; 8];
         self.state = State::Default;
         self.len = 0;
