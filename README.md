@@ -13,7 +13,7 @@ All functionality is handled by the
 
 Text can be fed into the parser in reverse order:
 
-```
+```rust
 use rfind_url::{Parser, ParserState};
 
 let mut parser = Parser::new();
@@ -27,7 +27,7 @@ The parser returns the length of the URL as soon as the last character of the UR
 it. Otherwise it will return
 [`None`](https://doc.rust-lang.org/std/option/enum.Option.html#variant.None):
 
-```
+```rust
 use rfind_url::{Parser, ParserState};
 
 let mut parser = Parser::new();
