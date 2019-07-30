@@ -85,10 +85,14 @@ fn url_matching_chars() {
 
     assert_eq!(max_len("'https://example.org/test'ing'''"), Some(29));
     assert_eq!(max_len("https://example.org/test'ing'"), Some(29));
-    assert_eq!(max_len("\"https://example.org\""), Some(19));
     assert_eq!(max_len("'https://example.org'"), Some(19));
-    assert_eq!(max_len("\"https://example.org"), Some(19));
     assert_eq!(max_len("https://example.org'"), Some(19));
+
+    assert_eq!(max_len("\"https://example.org\""), Some(19));
+    assert_eq!(max_len("\"https://example.org"), Some(19));
+
+    assert_eq!(max_len("⟨https://example.org⟩"), Some(19));
+    assert_eq!(max_len("⟩https://example.org⟨"), Some(19));
 }
 
 #[test]
