@@ -143,23 +143,23 @@ impl Parser {
             return ParserState::NoUrl;
         }
 
-        // Filter non-matching surrounding characters like brackets and quotes
-        for surround_char in &SURROUND_CHARACTERS[..] {
-            // Check if this is a matching opening character
-            let m = self.surround_states.iter().enumerate().rfind(|s| (s.1).0 == c);
+        // Check if this is a matching opening character
+        let m = self.surround_states.iter().enumerate().rfind(|s| (s.1).0 == c);
 
-            match m {
-                // Remove match to permit this surrounding, if surround is not empty
-                Some((index, elem)) if elem.1 + 1 < self.len => {
-                    self.surround_states.remove(index);
-                    return ParserState::MaybeUrl;
-                },
-                // Store surrounding to find a match in the future
-                None if surround_char.start() == &c => {
-                    self.surround_states.push((*surround_char.end(), self.len));
-                    return ParserState::MaybeUrl;
-                },
-                _ => (),
+        // Remove match to permit this surrounding, if surround is not empty
+        if let Some((index, elem)) = m {
+            if elem.1 + 1 < self.len {
+                self.surround_states.remove(index);
+                return ParserState::MaybeUrl;
+            }
+        }
+
+        // Filter non-matching surrounding characters like brackets and quotes
+        for surround_char in &SURROUND_CHARACTERS {
+            // Store surrounding to find a match in the future
+            if m.is_none() && surround_char.start() == &c {
+                self.surround_states.push((*surround_char.end(), self.len));
+                return ParserState::MaybeUrl;
             }
 
             // Truncate if there's no matching end for this start
