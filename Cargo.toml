@@ -3,13 +3,14 @@ authors = ["Christian Duerr <contact@christianduerr.com>"]
 description = "Parser to search strings for URLs in reverse order"
 repository = "https://github.com/chrisduerr/rfind_url.git"
 keywords = ["reverse", "stream", "url", "parser"]
+maintenance = { status = "passively-maintained" }
 documentation = "https://docs.rs/rfind_url"
 categories = ["parsing"]
 exclude = ["/.travis.yml"]
 license = "MIT/Apache-2.0"
 readme = "README.md"
 name = "rfind_url"
-version = "0.4.2"
+version = "0.4.3"
 edition = "2018"
 
 [badges]
