@@ -3,7 +3,6 @@ authors = ["Christian Duerr <contact@christianduerr.com>"]
 description = "Parser to search strings for URLs in reverse order"
 repository = "https://github.com/chrisduerr/rfind_url.git"
 keywords = ["reverse", "stream", "url", "parser"]
-maintenance = { status = "passively-maintained" }
 documentation = "https://docs.rs/rfind_url"
 categories = ["parsing"]
 exclude = ["/.travis.yml"]
@@ -15,6 +14,7 @@ edition = "2018"
 
 [badges]
 travis-ci = { repository = "chrisduerr/rfind_url" }
+maintenance = { status = "passively-maintained" }
 
 [features]
 bench = []
